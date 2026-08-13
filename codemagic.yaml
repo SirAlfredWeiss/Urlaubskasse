@@ -5,40 +5,20 @@ workflows:
     max_build_duration: 30
     environment:
       flutter: stable
-      vars:
-        # Empfohlen: Supabase-Daten hier als Umgebungsvariablen setzen,
-        # dann muessen sie nicht in lib/config.dart stehen.
-        # SUPABASE_URL: "https://DEINPROJEKT.supabase.co"
-        # SUPABASE_ANON_KEY: "eyJ..."
     scripts:
       - name: Android-Projekt erzeugen
         script: |
-          # Der Ordner android/ liegt nicht im Repo, wird hier frisch erzeugt.
           flutter create --platforms=android --project-name urlaubskasse --org com.urlaub _scaffold
           cp -r _scaffold/android .
           rm -rf _scaffold
       - name: Internet-Berechtigung sicherstellen
         script: |
-          M=android/app/src/main/AndroidManifest.xml
-          if ! grep -q "android.permission.INTERNET" "$M"; then
-            # macOS-sed (Codemagic laeuft auf Mac)
-            sed -i '' 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\
-    <application#' "$M"
-          fi
+          perl -0pi -e 's{<application}{<uses-permission android:name="android.permission.INTERNET"/>\n    <application}' android/app/src/main/AndroidManifest.xml
       - name: Pakete holen
-        script: flutter pub get
+        script: |
+          flutter pub get
       - name: APK bauen
         script: |
-          if [ -n "$SUPABASE_URL" ]; then
-            flutter build apk --release \
-              --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-              --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-          else
-            flutter build apk --release
-          fi
+          flutter build apk --release
     artifacts:
       - build/**/outputs/**/*.apk
-    publishing:
-      email:
-        # Optional: Deine Mailadresse eintragen, dann kommt die APK per Mail.
-        recipients: []
